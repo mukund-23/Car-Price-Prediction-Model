@@ -14,7 +14,7 @@ import seaborn as sns
 sns.set(rc={'figure.figsize':(11.7,8.27)})
 
 # read csv file and create a copy
-cars_data = pd.read_csv('cars_sampled.csv')
+cars_data = pd.read_csv("cars_sampled.csv")
 cars = cars_data.copy()
 
 # summarize the dataset
@@ -77,8 +77,8 @@ sns.distplot(cars['Age'])
 sns.boxplot(y = cars['Age'])
 
 # price
-sns.distplot(cars['Price'])
-sns.boxplot(y = cars['Price'])
+sns.distplot(cars['price'])
+sns.boxplot(y = cars['price'])
 
 # powerPS
 sns.distplot(cars['powerPS'])
@@ -144,3 +144,111 @@ sns.boxplot(y='price', x='notRepairedDamage', data=cars)
 col = ['offerType','seller', 'abtest']
 cars = cars.drop(columns = col, axis = 1)
 cars_copy = cars.copy()
+
+
+# Correlation between numerical variables
+cars_select1 =  cars.select_dtypes(exclude=[object])
+correlation = cars_select1.corr()
+round(correlation, 3)
+cars_select1.corr().loc[:,'price'].abs().sort_values(ascending=False)[1:]
+
+
+# Omitting missing values
+cars_omit = cars.dropna(axis=0)
+
+#Converting categorical variables to dummy variables
+cars_omit = pd.get_dummies(cars_omit, drop_first=True)
+
+
+# importing libraries
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+
+# model building with omitted data
+
+# separating input and output features
+x1 = cars_omit.drop(['price'], axis= 'columns', inplace = False)
+y1 = cars_omit['price']
+
+# plotting the variable price
+prices = pd.DataFrame({"1 Before": y1, "2 After": np.log(y1)})
+prices.hist()
+
+#transforming price as a logarithmic value to get rid of skewness
+y1 = np.log(y1)
+ 
+# Splitting into training and testing dataset
+X_train, X_test, y_train, y_test = train_test_split(x1, y1, test_size = 0.3, random_state = 3)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+
+# Baseline model for omitted data
+# This is to set a benchmark and compare our regression models
+# We are building base model using mean of y_test 
+
+base_pred = np.mean(y_test)
+print(base_pred)
+
+# Repeating same value till length of test data
+base_pred = np.repeat(base_pred,  len(y_test))
+
+# finding the rmse
+base_root_mean_square_error = np.sqrt(mean_squared_error(y_test, base_pred))
+print(base_root_mean_square_error)
+
+
+# Built models should give rmse less than that obtained above
+
+# Building Linear Regression Model
+
+lgr = LinearRegression(fit_intercept=True)
+model_ln1 = lgr.fit(X_train, y_train)
+cars_pred_lr1 = lgr.predict(X_test)
+
+# Computing RMSE and MSE
+
+lin_mse1 = mean_squared_error(y_test, cars_pred_lr1)
+lin_rmse1 = np.sqrt(lin_mse1)
+print(lin_rmse1)
+
+# R squared value
+r2_lin_test1 = model_ln1.score(X_test, y_test)
+r2_lin_train1 = model_ln1.score(X_train, y_train)
+print(r2_lin_test1, r2_lin_train1)
+
+# Regression diagnostics-Residual plot analysis
+residuals1 = y_test-cars_pred_lr1
+sns.regplot(x=cars_pred_lr1, y=residuals1, scatter=True, fit_reg=False)
+residuals1.describe()
+
+# Random forest with omitted data
+
+# model parameters
+rf = RandomForestRegressor(n_estimators=100, max_depth = 100, max_features='auto',
+                           min_samples_split=10, min_samples_leaf=4,random_state=1)
+model_rf1 = rf.fit(X_train, y_train)
+
+# Predicting model on test data
+cars_predictions_rf1 = rf.predict(X_test)
+
+# computing mse and rmse
+
+rf1_mse1 = mean_squared_error(y_test, cars_predictions_rf1)
+rf1_rmse1 = np.sqrt(rf1_mse1)
+print(rf1_mse1, rf1_rmse1)
+
+# R squared value
+r2_rf_test1 = model_rf1.score(X_test, y_test)
+r2_lin_train1 = model_rf1.score(X_train, y_train)
+print(r2_lin_test1, r2_lin_train1)
+
+
+
+
+ 
+
+
+
